@@ -45,7 +45,6 @@ func listEvents(c *gin.Context) {
 	log.Println("Successful data parse")
 
 	//returning jsonvalue of events var
-	c.Writer.Header().Set("Content-Type", "application/json")
 	log.Println("Returning events")
 	c.JSON(http.StatusOK, events)
 }
@@ -54,26 +53,20 @@ func saveEvent(c *gin.Context) {
 	var event Event
 	//Data binding to model
 	if err := c.ShouldBindJSON(&event); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 	}
-
 	//Validate data given in request
 	if err := validator.Validate(event); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": err.Error(),
-		})
+		log.Printf("Bad request: %v", err.Error())
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
 	}
 
-	//Generate id in the vains of already existing records (should implement a check if it's unique, highly improbable tho)
-	idStr, err := reggen.Generate("[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}", 1)
-	if err != nil {
-		log.Println(err)
-	}
+	//Generate id in the veins of already existing records (should implement a check if it's unique, highly improbable tho)
+	idStr, _ := reggen.Generate("[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}", 1)
+
 	log.Println("Generated ID")
 	event.Id = idStr
-	c.Writer.Header().Set("Content-Type", "application/json")
 	log.Println("Returning value of event after ID assign")
 
 	c.JSON(http.StatusCreated, event)
