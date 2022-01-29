@@ -25,10 +25,10 @@ type Venue struct {
 
 type Event struct {
 	Id          string `json:"id"`
-	Name        string `json:"name" validate:"len>=10"`
+	Name        string `json:"name" validate:"min=10"`
 	Venue       Venue  `json:"venue" validate:"nonzero"`
-	Description string `json:"description" validate:"len>=30"`
-	Date        string `json:"date"`
+	Description string `json:"description" validate:"min=30"`
+	Date        string `json:"date" regexp=[0-9]{4}-[0-1][0-9]-[0-3][0-9]T[0-5][0-9]:[05][0-9]:[05][0-9]Z`
 }
 
 func listEvents(c *gin.Context) {
