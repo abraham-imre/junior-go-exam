@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -11,23 +14,70 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lucasjones/reggen"
+	"gopkg.in/validator.v2"
 )
 
+type Venue struct {
+	Name     string `json:"name" validate:"nonzero"`
+	Location string `json:"location" validate:"nonzero"`
+}
+
+type Event struct {
+	Id          string `json:"id"`
+	Name        string `json:"name" validate:"min=10"`
+	Venue       Venue  `json:"venue" validate:"nonzero"`
+	Description string `json:"description" validate:"min=30"`
+	Date        string `json:"date" validate:"regexp=[0-9]{4}-[0-1][0-9]-[0-3][0-9]T[0-5][0-9]:[05][0-9]:[05][0-9]Z"`
+}
+
 func listEvents(c *gin.Context) {
-	// TODO: implement event listing
-	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-		"message": "unimplemented",
-	})
+	//events variable to store all the entities that will be parsed from event-list.json
+	var events []Event
+	jsonFile, err := os.Open("./test/event-list.json")
+	if err != nil {
+		log.Println(err)
+	}
+	//reading bytes from file
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	//bytevalue parsing into events var
+	json.Unmarshal(byteValue, &events)
+	log.Println("Successful data parse")
+
+	//returning jsonvalue of events var
+	log.Println("Returning events")
+	c.JSON(http.StatusOK, events)
 }
 
 func saveEvent(c *gin.Context) {
-	// TODO: implement saving and error handling
-	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-		"message": "unimplemented",
-	})
+	var event Event
+	//Data binding to model
+	if err := c.ShouldBindJSON(&event); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+	}
+	//Validate data given in request
+	if err := validator.Validate(event); err != nil {
+		log.Printf("Bad request: %v", err.Error())
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	//Generate id in the veins of already existing records (should implement a check if it's unique, highly improbable tho)
+	idStr, _ := reggen.Generate("[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}", 1)
+
+	log.Println("Generated ID")
+	event.Id = idStr
+	log.Println("Returning value of event after ID assign")
+
+	c.JSON(http.StatusCreated, event)
 }
 
 func main() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	router := gin.Default()
 
 	// Creating /api route prefix group
@@ -41,7 +91,7 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    fmt.Sprintf(":%v", port),
 		Handler: router,
 	}
 

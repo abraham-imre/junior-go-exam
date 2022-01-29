@@ -115,7 +115,7 @@ func TestSaveEvent(t *testing.T) {
 
 				assert.NoError(t, err)
 
-				assert.NotEmptyf(t, errMsg["message"], "the error response does not conain a valid message")
+				assert.NotEmptyf(t, errMsg["message"], "the error response does not contain a valid message")
 			})
 
 		}
